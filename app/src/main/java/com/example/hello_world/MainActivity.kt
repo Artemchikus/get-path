@@ -1,93 +1,56 @@
 package com.example.hello_world
 
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
+import android.hardware.display.DisplayManager
 import android.os.Bundle
-import android.util.Log
+import android.view.Display
 import android.view.View
-import android.widget.CheckBox
-import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.core.view.forEach
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileOutputStream
-import java.io.FileWriter
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.*
 
-class MainActivity : ComponentActivity(), SensorEventListener {
-    private lateinit var mSensorManager : SensorManager
-    private var resume = false
-    private val sensorTypes = arrayListOf<Int>()
-    private val sensors = mutableMapOf<String, Sensor>()
-    private val fileWriters = mutableMapOf<Int, FileWriter>()
-
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event != null && resume) {
-            fileWriters[event.sensor.type]?.appendLine(event.values.joinToString(";"))
-            fileWriters[event.sensor.type]?.flush()
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        return
-    }
+class MainActivity : ComponentActivity() {
+    private var mDisplay: Display?= null
+    private var dataStreamer: DataStreamer?= null
+    private var dataReceiver: DataReceiver?= null
+    private var stop = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Log.i("path", filesDir.path)
 
-        val checkBoxes = findViewById<LinearLayout>(R.id.checkboxes)
+        dataStreamer = DataStreamer(applicationContext)
+        dataReceiver = MyDataReceiver(applicationContext)
 
-        mSensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
-        mSensorManager.getSensorList(Sensor.TYPE_ALL).forEach {
-            val check = CheckBox(this)
-            val sensorType = it.stringType.removePrefix("android.sensor.").uppercase()
-            check.text = sensorType
-            checkBoxes.addView(check)
-
-            sensors[sensorType] = it
-
-            sensorTypes.add(it.type)
-        }
+        val dm = getSystemService(DISPLAY_SERVICE) as DisplayManager
+        mDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY)
     }
 
-    override fun onResume() {
-        super.onResume()
-    }
+    fun startReading(view: View) {
+        dataReceiver?.let { dataStreamer?.Start(it) }
 
-    override fun onPause() {
-        super.onPause()
-        mSensorManager.unregisterListener(this)
-        fileWriters.forEach{
-            it.value.flush()
-            it.value.close()
-        }
-    }
+        lifecycleScope.launch {
+            val textView = findViewById<TextView>(R.id.mainText)
 
-    fun resumeReading(view: View) {
-        this.resume = true
-
-        val checkBoxes = findViewById<LinearLayout>(R.id.checkboxes)
-        checkBoxes.forEach {
-            if (it is CheckBox && it.isChecked) {
-                val sensor = sensors[it.text]
-                if (sensor != null) {
-                    mSensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
-                    val file = File(filesDir.path+"/"+it.text)
-                    file.createNewFile()
-                    fileWriters[sensor.type] = FileWriter(file)
-                }
+            while (!stop) {
+                val text = """
+                    acc-x: ${dataReceiver?.accData?.x}
+                    acc-y: ${dataReceiver?.accData?.y}
+                    acc-z: ${dataReceiver?.accData?.z}
+                    ori-az: ${dataReceiver?.oriData?.azimuth}
+                    ori-pit: ${dataReceiver?.oriData?.pitch}
+                    ori-toll: ${dataReceiver?.oriData?.roll}
+                """.trimIndent()
+                println(text)
+                textView.text = text
+                delay(1000)
             }
         }
+        println("Wtf")
     }
 
-    fun pauseReading(view: View) {
-        this.resume = false
+    fun stopReading(view: View) {
+        stop = true
+        dataStreamer?.Stop()
     }
 }
