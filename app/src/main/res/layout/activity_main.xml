@@ -5,23 +5,19 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <ScrollView
-        android:id="@+id/scroll"
+    <EditText
+        android:id="@+id/mainText"
         android:layout_width="match_parent"
-        android:layout_height="675dp">
-
-        <LinearLayout
-            android:id="@+id/checkboxes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"/>
-    </ScrollView>
+        android:layout_height="280dp"
+        android:ems="10"
+        android:inputType="text|textMultiLine"
+        android:text="Name" />
 
     <Button
         android:id="@+id/start"
         android:layout_width="match_parent"
         android:layout_height="83dp"
-        android:onClick="resumeReading"
+        android:onClick="startReading"
         android:text="Start"
         android:textAppearance="@android:style/TextAppearance.Material.Large" />
 
@@ -29,7 +25,7 @@
         android:id="@+id/stop"
         android:layout_width="match_parent"
         android:layout_height="80dp"
-        android:onClick="pauseReading"
+        android:onClick="stopReading"
         android:text="Stop"
         android:textAppearance="@android:style/TextAppearance.Material.Large" />
 
