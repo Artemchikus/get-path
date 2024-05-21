@@ -4,16 +4,17 @@ import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
 import android.view.View
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 
 class MainActivity : ComponentActivity() {
     private var mDisplay: Display?= null
     private var dataStreamer: DataStreamer?= null
     private var dataReceiver: DataReceiver?= null
     private var stop = false
+    private var drawer: Drawer?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,13 +25,17 @@ class MainActivity : ComponentActivity() {
 
         val dm = getSystemService(DISPLAY_SERVICE) as DisplayManager
         mDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY)
+
+        drawer = findViewById(R.id.map)
     }
 
     fun startReading(view: View) {
+        stop = false
         dataReceiver?.let { dataStreamer?.Start(it) }
 
         lifecycleScope.launch {
-            val textView = findViewById<TextView>(R.id.mainText)
+            val dataChan = Channel<RelVector>()
+            drawer?.StartDrawing(dataChan)
 
             while (!stop) {
                 val text = """
@@ -41,16 +46,23 @@ class MainActivity : ComponentActivity() {
                     ori-pit: ${dataReceiver?.oriData?.pitch}
                     ori-toll: ${dataReceiver?.oriData?.roll}
                 """.trimIndent()
-                println(text)
-                textView.text = text
-                delay(1000)
+
+                val accX = dataReceiver?.accData!!.x
+                val accY = dataReceiver?.accData!!.y
+                val accZ = dataReceiver?.accData!!.z
+
+                val vec = RelVector(accX*100, accY*100, accZ)
+
+                dataChan.send(vec)
+
+                delay(3000)
             }
         }
-        println("Wtf")
     }
 
     fun stopReading(view: View) {
         stop = true
         dataStreamer?.Stop()
+        drawer?.EndDrawing()
     }
 }
