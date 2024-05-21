@@ -24,7 +24,6 @@ class DataStreamer(context: Context): SensorEventListener {
             when (event.sensor.type) {
                 Sensor.TYPE_ACCELEROMETER -> {
                     val data = event.values.clone()
-                    println(data)
 
                     receiver?.accData?.x = data[0]
                     receiver?.accData?.y = data[1]
@@ -35,7 +34,6 @@ class DataStreamer(context: Context): SensorEventListener {
                 }
                 Sensor.TYPE_ROTATION_VECTOR -> {
                     rotationVector = event.values.clone()
-                    println(rotationVector)
 
                     val rotationV = FloatArray(9)
                     SensorManager.getRotationMatrixFromVector(rotationV, rotationVector)
@@ -111,16 +109,21 @@ class DataStreamer(context: Context): SensorEventListener {
     }
 
 
-    fun Start(dataGetter: DataReceiver) {
+    fun Start(dataGetter: DataReceiver): Boolean {
         if (mRotVector != null && mAccelerometer != null) {
             receiver = dataGetter
             mSensorManager.registerListener(this, mRotVector, SensorManager.SENSOR_DELAY_NORMAL)
             mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL)
+            return true
         }
+
+        return false
     }
 
-    fun Stop() {
+    fun Stop(): Boolean {
         mSensorManager.unregisterListener(this)
         receiver = null
+
+        return true
     }
 }
