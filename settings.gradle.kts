@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Hello-World"
+rootProject.name = "Get-Path"
 include(":app")
  
