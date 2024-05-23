@@ -11,23 +11,30 @@ data class OrientationData(var azimuth: Float, var pitch: Float, var roll: Float
 
 class DataStreamer(context: Context): SensorEventListener {
     private var mSensorManager : SensorManager
-    private var mAccelerometer : Sensor?= null
-    private var mMagnetometer : Sensor?= null
-    private var mRotVector : Sensor?= null
+    private val gravity = FloatArray(3)
+
+    private var mAccelerometer : Sensor?
+    private var mMagnetometer : Sensor?
+    private var mRotVector : Sensor?
     private var orientationArray = FloatArray(3)
     private var rotationVector = FloatArray(9)
     private val VALUE_DRIFT = 0.05f
-    private var receiver : DataReceiver?=null
+    private val alpha = 0.8f // low-pass filter coefficient
+
+    private lateinit var receiver : DataReceiver
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event != null) {
             when (event.sensor.type) {
                 Sensor.TYPE_ACCELEROMETER -> {
                     val data = event.values.clone()
+                    gravity[0] = alpha * gravity[0] + (1 - alpha) * data[0]
+                    gravity[1] = alpha * gravity[1] + (1 - alpha) * data[1]
+                    gravity[2] = alpha * gravity[2] + (1 - alpha) * data[2]
 
-                    receiver?.accData?.x = data[0]
-                    receiver?.accData?.y = data[1]
-                    receiver?.accData?.z = data[2]
+                    receiver.accData.x = data[0] - gravity[0]
+                    receiver.accData.y = data[1] - gravity[1]
+                    receiver.accData.z = data[2] - gravity[2]
                 }
                 Sensor.TYPE_MAGNETIC_FIELD -> {
                     val data = event.values.clone()
@@ -41,9 +48,12 @@ class DataStreamer(context: Context): SensorEventListener {
                     val orientationValuesV = FloatArray(3)
                     SensorManager.getOrientation(rotationV, orientationValuesV)
 
-                    receiver?.oriData?.azimuth = orientationValuesV[0]
-                    receiver?.oriData?.pitch = orientationValuesV[1]
-                    receiver?.oriData?.roll = orientationValuesV[2]
+                    receiver.oriData.azimuth = orientationValuesV[0]
+                    receiver.oriData.pitch = orientationValuesV[1]
+                    receiver.oriData.roll = orientationValuesV[2]
+                }
+                Sensor.TYPE_GRAVITY -> {
+                    System.arraycopy(event.values, 0, gravity, 0, event.values.size)
                 }
                 else -> {
                     return
@@ -122,7 +132,6 @@ class DataStreamer(context: Context): SensorEventListener {
 
     fun Stop(): Boolean {
         mSensorManager.unregisterListener(this)
-        receiver = null
 
         return true
     }

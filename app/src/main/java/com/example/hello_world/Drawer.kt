@@ -11,6 +11,7 @@ import android.graphics.PointF
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -21,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
-data class RelVector(var x: Float, var y: Float, var z: Float)
+data class RelVector(var x: Float, var y: Float, var z: Float, var len: Float)
 class Drawer: AppCompatImageView, View.OnTouchListener, GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
     private var mContext: Context? = null
     private var mScaleDetector: ScaleGestureDetector? = null
@@ -43,7 +44,9 @@ class Drawer: AppCompatImageView, View.OnTouchListener, GestureDetector.OnGestur
     private lateinit var canvas: Canvas
     private lateinit var painter: Paint
     private lateinit var eraser: Paint
-    private var chosenPoint = PointF()
+    private var chosenPoint = PointF(
+        2000f, 660f
+    )
     private var isDrawing = false
     private val myCoroutineScope = CoroutineScope(Dispatchers.Main)
     private var relVectorChannel: Channel<RelVector>? = null
@@ -271,20 +274,18 @@ class Drawer: AppCompatImageView, View.OnTouchListener, GestureDetector.OnGestur
         isDrawing = true
         relVectorChannel = dataChan
 
-        if (chosenPoint.x == 0f) {
-            return false
-        }
+//        if (chosenPoint.x == 0f) {
+//            return false
+//        }
 
         drawPointStart.x = chosenPoint.x
         drawPointStart.y = chosenPoint.y
 
         myCoroutineScope.launch {
             for (vec in dataChan)  {
-                val values = FloatArray(9)
-                imageMatrix.getValues(values)
-
-                val newX = (vec.x - values[Matrix.MTRANS_X]) / values[Matrix.MSCALE_X]
-                val newY = (vec.y -  values[Matrix.MTRANS_Y]) / values[Matrix.MSCALE_Y]
+                val vectorLength = vec.len * 5// Length of the vector for display purposes
+                val newX = drawPointStart.x + (vec.x * vectorLength)
+                val newY = drawPointStart.y - (vec.y * vectorLength)
 
                 println("newX: $newX")
                 println("newY: $newY")
